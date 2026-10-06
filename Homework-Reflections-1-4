@@ -50,3 +50,6 @@ One issue I encountered with this method is the x difference and/or y difference
 
 2. Plot the college outcome (Y) vs. the test score (X) in a small range of test scores around 80. On the plot, compare it with the Y probability predicted by logistic regression. The ground truth Y value is 0 or 1; don't just plot 0 or 1 - that will make it unreadable.  Find some way to make it look better than that.
 
+I have plotted the college outcome vs. the test score in the code notebook. I used a jitter for the y values so you can see the points seperated and can see the trends. I did randomly sample 1000 points so the graphs were able to be interpretted since the range I chose of 75-85 had too many points so the area looked like a think line for 1 and 0 even with the jitter. I then plotted a line that was the y probabilities to show how the probability moves as test scores increase.
+
+What I found interesting was for the B group of data, the probability line was much higher than the A group's line. However, I did notice that both lines had a positive slope and the scatter plots supported that. It could be seen as the test scores increased, the number of points in 1 also increased and the number of points in 0 decreased.
