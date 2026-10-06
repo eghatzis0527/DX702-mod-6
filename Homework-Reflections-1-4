@@ -11,11 +11,28 @@ Homework reflection 1
 
 Invent your own type of matching similar to 1 and 2 (or look one up on the internet), which has a different way to pick the matches in X = 0.  Clearly explain the approach you invented or found.
 
+A type of matching that I found on the internet is called Coarsened Exact Matching (CEM). This is a matching system that relies on different variable values to match memebers of the control and treatment group. To begin this matching process, you first have to choose the group of variables you will use to match people. This is one of the hardest parts of this process. If variables that are too tight or too loose are choosen, then proper matching may not occur. Examples of these variables include age, gender, if someone has cancer, if someone has a different medical diagnosis, etc. 
+
+Once you have your variables, you then will divide them into certain bins. Looking at age, this variable can be broken down in many different bins. For example, you could have it be binary where if someone is above a certain age, they have a 1, otherwise it is a 0. Another example of binning age would be to break down the age range into quartiles and everyone would have a number between 1 and 4. Determining how you breakdown different variables into bins relies on what your data looks like. For example, in a study where age is very diverse, using a binary bin system would probably be fine, but if ages were all above a certain number, that type of bin system would be too loose.
+
+When all the variables have been turned into bins, each person will then be matched up to someone in the other cohort that has the same bin signature. A bin signature is someone's combination of bin numbers for each variable. Sometimes, someone in one cohort will not have any matches with someone in the other cohort. You also may notice that the number of people matched in the control group is not the same as the treatment. This variance must be treated with a weighting system, where unmatched people have a weight of 0, matched treatment people have a weight of one, and people that were matched in the control group are assigned a weight using the formula: (n_treatment/n_control)/(total_n_control/total_n_treatment). These weights can then be used to get the final weighted treatment effect without any variance by taking the evaluated measurements and multiplying them by the individual's weight.
+
+I have attached the link to the article I read about this method right below, it goes into further detail and provides more examples as well as problems with this matching method.
+https://medium.com/@devmotivation/cem-coarsened-exact-matching-explained-7f4d64acc5ef 
+
 Homework reflection 2
 
 1. Invent an example situation that would use fixed effects.
 
+An example situation that could use fixed effects is how fast it takes to crochet a hat based on yarn types, with the crocheter's ability is the fixed effect as different people crochet at different speeds. The outcome variable (Y) would be the amount of time it takes to crochet the hat entirely, and the treatment (X) would be the type of yarn used. The three types would be an acrylic yarn, a cotton yarn and then a wool yarn. The fixed effect itself would just be the person's abilities at crocheting, such as the speed at which someone crochets and their technique for crocheting.
+
+I got this idea as I crochet myself and find that different yarns can affect how fast I can create a hat. I've noticed that different yarns based on their makeup can be rougher to work with and cause me to take more breaks since they rub on my finger a lot more, causing me pain and leading me to take longer to finish the project.
+
 2. Write a Python program that performs a bootstrap simulation to find the variance in the mean of the Pareto distribution when different samples are taken.  Explain what you had to do for this.  As you make the full sample size bigger (for the same distribution), what happens to the variance of the mean of the samples?  Does it stay about the same, get smaller, or get bigger?
+
+To code this, I started by creating a pareto distribution using np.random.pareto(a = 2, size = 10000) and created a list of sample sizes which were 10, 50, 100, 250, 500, 1000, 2500, 5000, and 10000. I then began using a for loop that would first loop through each sample size, and within the loop, create a list of sample means. I would then begin another loop that will run 1000 times that will randomly select the sample size amount of data points from the pareto distribution. I would then take the mean of this sample and append it to the sample means list. Once the loop that creates the random samples finishes, I take the variance of the sample means list and then display that variance. The loop will then start again with the next sample size until it has finished going through that list. The code is attached in the reflections code notebook I have submitted as well. 
+
+As the full sample size becomes bigger, the variance of the mean begins to get smaller. For the smallest sample size of 10, the variance was 0.6568 and the largest sample size of 10,000 had a variance of 0.0007. I found that in the beginning, the smaller sample sizes have much larger decreases in the variance compared to the larger sample sizes. This does make sense since as the sample size gets larger, the samples are more likely to have similar data points, and therefore similar means which would lead to smaller variances. 
 
 Homework reflection 3
 
@@ -27,4 +44,9 @@ Homework reflection 4
 
 1. The Coding Quiz gives two options for instrumental variables.  For the second item (dividing the range of W into multiple ranges), explain how you did it, show your code, and discuss any issues you encountered.
 
+For the second item, I completed this by dividing the W variable into 10 bins using pandas cut, then created a loop that will loop through the groups created by grouping the data by the bins. I will then perform the effect formula for each group and append the found effect to a list. I will then get the overall effect by taking the mean of it. The effect formula I used is (mean of y where z = 1 - mean of y where z = 0)/(mean of x where z = 1 - mean of x where z = 0). I have included my code in the attached code notebook. 
+
+One issue I encountered with this method is the x difference and/or y difference could be 0 or nan due to not having any values for one of the groups in a bin. This would lead to the calculated effect turning into NaN. To mitigate this issue, I added a check that will only calculate the effect if the x difference is not 0 or nan and the y difference is not nan. I otherwise did not encounter any other issues when writing this code. 
+
 2. Plot the college outcome (Y) vs. the test score (X) in a small range of test scores around 80. On the plot, compare it with the Y probability predicted by logistic regression. The ground truth Y value is 0 or 1; don't just plot 0 or 1 - that will make it unreadable.  Find some way to make it look better than that.
+
