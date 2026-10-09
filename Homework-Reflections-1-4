@@ -5,6 +5,8 @@ Homework reflection 1
 
 1. In Coding Quiz 1, you are asked to find the distance of the farthest match in a set.  Is this farthest match distance too far to be a meaningful match?  How can you decide this?
 
+The furthest distance for this dataset came out to 0.2102 which I would say is too far to be a meaningful match. I first started by graphing a histogram where you can see there is a large spike near 0 and then it has a sharp decrease. There are also some gaps between the furthest distance and the majority of the distances, which showed me the furthest distance may be an outlier. To back up my outlier theory, I then constructed the summary table that shows the statistical summary values for the distances. The mean distance for this dataset is 0.0498, which makes 0.2102 about 4 times larger than the mean. I also have calculated the 75th quartile which is 0.0558, which is also very far away from the furthest value. Due to these large distances from the mean and 75th quartile, I would say the furthest match is too far to be a meaningful match.
+
 2. In Coding Quiz 1, there are two approaches to matching: 
 (A) Picking the best match X = 0 corresponding to each X = 1 using Z values.
 (B) Using radius_neighbors to pick all matches X = 0 within a distance of 0.2 of each X = 1.
@@ -38,7 +40,13 @@ Homework reflection 3
 
 1. In the event study in Coding Quiz 3, how would we go about testing for a change in the second derivative as well?
 
+If we were to go about testing for a change in the second derivative as well, we would want to add a quadratic time term to the equation along with an interaction term between the quadratic time term and the After variable. We would want to look at the coefficient for the interaction term between the quadratic time and the after variable as this will check for potential discontinuity, like how the coefficient for the linear interaction term showed us if there was any discontinuity in the slope.
+
 2. Create your own scenario that illustrates differences-in-differences. Describe the story behind the data and show whether there is a nonzero treatment effect.
+
+A scenario that illustrates differences in differences would be testing to see how much fertilizer helps plants grow by having a control group that you just water, and then having a treatment group that you water and add fertilizer to. For these two groups, you would ensure that the plants have similar growing conditions like temperature, sun exposure, and water amount so the only difference between the two groups would be whether or not they have been given fertilizer. Due to the shared condition on water amount, you could subtract the benefit of water amount from the treatment groups benefit to get the benefit of having the fertilizer.
+
+To create the data, I built a dataframe that contained the plant's starting height, final height, what group it was in and what time it was in. To get the starting height, I used a numpy's random normal number generator that will generate random starting heights that have a mean of 10 and standard deviation of 2. There were 50 plants in the control group and 50 plants in the treatment group as well. As for the final plant height, I added 5 inches to all the starting heights, and then an additional 5 inches for plants that were in the treatment group. I then conducted a linear regression using the formula in our module for differences to differences with height being the outcome, and the x values being group (0 or 1), time (0 or 1), and the treated is group * time. After completing this regression, I found that there is a nonzero treatment effect on my simulation of plant growth with or without fertilizer. The p-value was 0.0002 for the treated coefficient which tells me that the coefficient is statistically significant and the fertilizer does in fact have an effect on plant growth.
 
 Homework reflection 4
 
