@@ -31,6 +31,7 @@ Flowers begin to grow --> Deer and Bears Return --> Deer and Bear populations in
                                                         |                       |
                                                         v                       v
                                         Deer Population Decreases     Flower Population Decreases
+
 Write a dataset that simulates this situation.  (Show the code.) Include noise / randomness in all cases.
 
 Code to Build Dataset:
@@ -121,7 +122,7 @@ Selecting the MTE based off of the the most extreme difference, we may find the 
 Possible answer: maybe we could take the 90th percentile of the treatment effect and use it as a proxy for the Marginal Treatment Effect.
 (Either code this answer or choose a different one.)
 
-I agree with the possible answer that a solution could be to cap the data at the 90th percentile and get an estimate of the MTE. The capped dataset could be used as a proxy dataset for the original and we can use it to get the estimated MTE. This will help reduce the influence of the high data points due to the variation. 
+I agree with the possible answer that a solution could be to cap the data at the 90th percentile and get an estimate of the MTE. The capped dataset could be used as a proxy dataset for the original and we can use it to get the estimated MTE. This will help reduce the influence of the high data points that could be within the dataset, and could in turn provide a more robust estimate for the MTE. 
 
 Code:
 
@@ -129,6 +130,21 @@ Code:
 Homework Reflection 7
 
 1. Create a linear regression model involving a confounder that is left out of the model.  Show whether the true correlation between $$X$$ and $$Y$$ is overestimated, underestimated, or neither.  Explain in words why this is the case for the given coefficients you have chosen.
+
+Code:
+
+W = np.random.normal(0, 1, 100)
+X = 4 * W + np.random.normal(0, 1, 100)
+y = 3 * X + 5 * W + np.random.normal(0, 1, 100)
+
+X = pd.DataFrame({'X' : X, 'W' : W})
+X = sm.add_constant(X)
+
+model = sm.OLS(y, X).fit()
+
+print(f'Estimated Coeffficient for X without W: {model.params['X']}')
+
+The estimated coefficient for X without the confounder W came out to 3.11 when the true coefficient was 3. The estimated coefficient was slightly overestimated, but it was not a very high overestimation with the estimated being only 0.11 higher than the true coefficient. The reason the model is overestimating it slightly is due to the model attributing some of the postive effect from W onto X when it is predicting Y since it does not have W as a feature to attribute the effect to.
 
 2. Perform a linear regression analysis in which one of the coefficients is zero, e.g.
 
@@ -141,6 +157,30 @@ And compute the p-value of a coefficient - in this case, the coefficient of W.
 If the p-value is less than 0.05, this ordinarily means that we judge the coefficient to be nonzero (incorrectly, in this case.)
 Run the analysis 1000 times and report the best (smallest) p-value.  
 If the p-value is less than 0.05, does this mean the coefficient actually is nonzero?  What is the problem with repeating the analysis?
+
+Code:
+smallest_p_value = 1
+
+for i in range(1000): 
+    X = np.random.normal(0, 1, 100)
+    W = np.random.normal(0, 1, 100)
+    Y = 2 * X + np.random.normal(0, 1, 100)
+
+    X = pd.DataFrame({'X' : X, 'W' : W})
+    X = sm.add_constant(X)
+    y = Y
+
+    model = sm.OLS(y, X).fit()
+
+    p_value = model.pvalues['W']
+
+    if p_value < smallest_p_value:
+        smallest_p_value = p_value
+
+print(f'The Smallest P-Value is {smallest_p_value:.4f}')
+
+The p-value came out to 0.0006, making it less than 0.05, which does suggest that the coefficient is non-zero which is not true. This could be caused by a false positive when completing the regression analysis due to the random variation within the W feature. This can especially be caused by repeating the analysis numerous times. By repeating the analysis 1000 times and selecting the smallest p-value, we are increasing our chances to find at least one false positives in the repeats. 
+
 
 Homework Reflection 8
 
