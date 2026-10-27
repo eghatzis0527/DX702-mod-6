@@ -11,7 +11,11 @@ A negative feedback loop means that one thing increases another while the second
 
 Remember that we are using directed acyclic graphs where two things cannot directly cause each other.
 
+High Body Temp. (at t) --> Begin Sweating --> Sweat Evaporates --> Lower Body Temp. (t+1)
+
 2. Describe an example of a positive feedback loop.  This means that one things increases another while the second things also increases the first.
+
+An example of a positive feedback loop would be studying for an exam and getting a better grade on the test you are studying for. The more time you spend studying a topic, the more you understand it and can then apply this knowledge to the test and get a better grade. Getting the better grade can then motivate you to spend the same amount of time or more studying for the next test in the class.
 
 3. Draw a diagram for the following situation:
 
@@ -19,11 +23,91 @@ Lightning storms frighten away deer and bears, decreasing their population, and 
 Bears eat deer, decreasing their population.
 Deer eat flowers, decreasing their population.
 
+Lightning Storm --> Deer and Bears Run Away --> Deer and Bear populations decrease -->
+Flowers begin to grow --> Deer and Bears Return --> Deer and Bear populations increase
+                                                        |                       |
+                                                        v                       v
+                                                Bears Eat Deer              Deer Eat Flowers
+                                                        |                       |
+                                                        v                       v
+                                        Deer Population Decreases     Flower Population Decreases
 Write a dataset that simulates this situation.  (Show the code.) Include noise / randomness in all cases.
+
+Code to Build Dataset:
+num_days = 100
+
+deer_pop = 200
+bear_pop = 50
+flower_pop = 750
+
+data = []
+
+for day in range(num_days):
+
+    # Determines if lightning occurs, 8% chance of happening
+    lightning_occurs = np.random.binomial(1, 0.08)
+
+    # Number of Deer Leaving
+    # Around 3% of deer leave without a storm and around 30% of deer leave with a storm
+    deer_leaving = np.random.binomial(deer_pop, 0.3 if lightning_occurs else 0.03)
+    deer_pop = deer_pop - deer_leaving
+
+    # Number of Bear Leaving
+    # Around 3% of bear leave without a storm and around 20% of bear leave with a storm
+    bear_leaving = np.random.binomial(bear_pop, 0.2 if lightning_occurs else 0.03)
+    bear_pop = bear_pop - bear_leaving
+
+    # Flower Growth
+    # On average 12 flowers grow with a storm, and without 5 flowers grow on average 
+    # with a standard deviation of 3 flowers
+
+    flower_growth = max(0, int(np.random.normal(12 if lightning_occurs else 5, 3)))
+    flower_pop += flower_growth
+
+    # Number of Animals that Return
+    # Around 40% of animals that leave due to a storm return, around 10% of animals that left without storm return
+
+    deer_returning = np.random.binomial(deer_leaving, 0.4 if lightning_occurs else 0.1)
+    bear_returning = np.random.binomial(bear_leaving, 0.4 if lightning_occurs else 0.1)
+
+    deer_pop += deer_returning
+    bear_pop += bear_returning
+
+    # Number of Deer Eaten
+    # Each bear eats around 20% of a deer per day
+
+    deer_eaten = min(deer_pop, np.random.poisson(0.2 * bear_pop))
+    deer_pop = deer_pop - deer_eaten
+
+    # Number of Flowers Eaten
+    # Each deer eats around 50% of a flower per day
+
+    flowers_eaten = min(flower_pop, np.random.poisson(0.5 * deer_pop))
+    flower_pop = flower_pop - flowers_eaten
+
+    data.append({'Day' : day + 1, 'Lightning' : lightning_occurs, 'Deer Population' : deer_pop,
+    'Bear Population' : bear_pop, 'Flower Population' : flower_pop, 'Deer Leaving' : deer_leaving,
+    'Bears Leaving' : bear_leaving, 'Flower Growth' : flower_growth, 'Deer Returning' : deer_returning,
+    'Bears Returning' : bear_returning, 'Deer Eaten' : deer_eaten, 'Flowers Eaten' : flowers_eaten})
+
+
+data_df = pd.DataFrame(data)
 
 Identify a backdoor path with one or more confounders for the relationship between deer and flowers.
 
+A potential confounder that could lead to a backdoor path for the relationship between deer and flowers would be the lightning storm. This variable can effect both the number of deer in the area as well as the number of flowers that are in the area. If the storm occurs, deer will get scared away, lowering the population and leading to less flowers getting eaten. However, the storm also leads to an increase in the flower growth so the flower population also increases due to the storm. This confounder could then lead to a misinterpretation on how much of the change in flowers is caused by the deer.
+
 4. Draw a diagram for a situation of your own invention.  The diagram should include at least four nodes, one confounder, and one collider.  Be sure that it is acyclic (no loops).  Which node would say is most like a treatment (X)?  Which is most like an outcome (Y)?
+
+The situation I am diagraming is sewing a garment designed by yourself. The confounder in this situation would be your sewing experience as it can affect how well you sew the garment which would affect the quality, and then it will also affect how long it takes you to sew the garment. It will affect your time sewing because if you are a more experience sewer, you are able to sew pieces together with fewer stops and sew faster than a beginner. The collider in this scenario would be if the garment is completed on time, which is caused by the complexity of your design as well as how fast you sew the garment together. If the design is more complex, it will take more time and make it less likely to be completed on time. Also, if you sew at a slower pace, you will take longer to complete the garment and therefore may not complete it on time. The diagram is below. Another colider could be the garment quality as well, which is affected by both the design complexity and the time spent sewing. If you spend little time and rush sewing the piece together, it would lead to the garment being of lower quality. Furthermore, the complexity of the design could also lead to the garment being of higher quality. You could include more complex finishing techniques for edges of the garment to make it higher quality, or could include simpler or no finishing techniques for the edges making it poorer quality. 
+
+                                          Sewing Experience
+                                        /                  \
+                                       v                    v
+           Design Complexity ---> Garment Quality <--- Time Spent Sewing
+                |                                               |
+                |                                               |
+                ---------------------> Completed on Time <-------
 
 Homework Reflection 6
 
