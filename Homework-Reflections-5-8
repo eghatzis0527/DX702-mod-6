@@ -115,9 +115,16 @@ Homework Reflection 6
 Possible answer: We are likely to find the item with the most extreme difference, which may be high simply due to randomness.
 (Please explain / justify this answer, or give a different one if you can think of one.)
 
+Selecting the MTE based off of the the most extreme difference, we may find the MTE is unusually high due to random variation within the data or caused by outliers. This can lead to us overestimating the MTE, and in turn reporting a statistic that is not accurate to the entire dataset and misinterpreting our findings.
+
 2. Propose a solution that remedies this problem and write some code that implements your solution.  It's very important here that you clearly explain what your solution will do.
 Possible answer: maybe we could take the 90th percentile of the treatment effect and use it as a proxy for the Marginal Treatment Effect.
 (Either code this answer or choose a different one.)
+
+I agree with the possible answer that a solution could be to cap the data at the 90th percentile and get an estimate of the MTE. The capped dataset could be used as a proxy dataset for the original and we can use it to get the estimated MTE. This will help reduce the influence of the high data points due to the variation. 
+
+Code:
+
 
 Homework Reflection 7
 
