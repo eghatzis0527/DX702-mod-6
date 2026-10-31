@@ -122,10 +122,26 @@ Selecting the MTE based off of the the most extreme difference, we may find the 
 Possible answer: maybe we could take the 90th percentile of the treatment effect and use it as a proxy for the Marginal Treatment Effect.
 (Either code this answer or choose a different one.)
 
-I agree with the possible answer that a solution could be to cap the data at the 90th percentile and get an estimate of the MTE. The capped dataset could be used as a proxy dataset for the original and we can use it to get the estimated MTE. This will help reduce the influence of the high data points that could be within the dataset, and could in turn provide a more robust estimate for the MTE. 
+I agree with the possible answer that a solution could be to take the 90th percentile of the treatment effect and get an estimate of the MTE. By taking the 90th percentile and not using the maximum MTE allows us to reduce the influence of the extreme values, which could be caused by random variation in the data. This would provide us a more reliable estimate of the upper range of treatment effects for the data without allowing extreme values determine the result.
+
+ In the code below, I created a randomized set of data where the X is a mix of 0s and 1s, Z is the random variation for Y, and then Y is constructed of Y0 and Y1 depending on the treated. If someone is treated, they will have an added effect of 4 + Z (leading to 9 + 2 * Z) to make the Y values differ. I added another instance of the Z value to ensure that there was a guaranteeded random variation in the treated y values. I then found the treatment effect for each instance, and then took the 90th percentile to get the proxy marginal treatment effect.
 
 Code:
 
+X = np.random.binomial(1, 0.5, 1000)
+
+Z = np.random.normal(0, 1, 1000)
+
+Y0 = 5 + Z
+Y1 = 9 + 2 * Z
+
+Y = np.where(X == 1, Y1, Y0)
+
+data = pd.DataFrame({'X' : X, 'Y' : Y, 'Y0' : Y0, 'Y1' : Y1})
+
+data['treatment_effect'] = data['Y1'] - data['Y0']
+
+mte = np.percentile(data['treatment_effect'], 90)
 
 Homework Reflection 7
 
@@ -133,18 +149,26 @@ Homework Reflection 7
 
 Code:
 
-W = np.random.normal(0, 1, 100)
-X = 4 * W + np.random.normal(0, 1, 100)
-y = 3 * X + 5 * W + np.random.normal(0, 1, 100)
+coefs = []
 
-X = pd.DataFrame({'X' : X, 'W' : W})
-X = sm.add_constant(X)
+for i in range(1000):
 
-model = sm.OLS(y, X).fit()
+    W = np.random.normal(0, 1, 100)
+    X = 4 * W + np.random.normal(0, 1,100)
+    y = 3 * X + 5 * W + np.random.normal(0, 1, 100)
 
-print(f'Estimated Coeffficient for X without W: {model.params['X']}')
+    X = pd.DataFrame({'X' : X})
+    X = sm.add_constant(X)
 
-The estimated coefficient for X without the confounder W came out to 3.11 when the true coefficient was 3. The estimated coefficient was slightly overestimated, but it was not a very high overestimation with the estimated being only 0.11 higher than the true coefficient. The reason the model is overestimating it slightly is due to the model attributing some of the postive effect from W onto X when it is predicting Y since it does not have W as a feature to attribute the effect to.
+    model = sm.OLS(y, X).fit()
+
+    coefs.append(model.params['X'])
+
+avg_coef = np.mean(coefs)
+
+print(f'Estimated Average Coeffficient for X without W: {avg_coef}')
+
+The estimated average coefficient for X without the confounder W came out to 4.18 when the true coefficient was 3. I did construct an average since everytime the model is run, the coefficient will have some variation due to the randomness of X, W and y. The estimated coefficient was overestimated, with the estimated coefficient having a difference of 1.18 from the actual coefficient. This is caused by the model attributing some of the positive effect that W actually provides in the construction of y to X since the model is not provided W to predict the y values. I do want to note that the coefficient may change slightly due to randomness
 
 2. Perform a linear regression analysis in which one of the coefficients is zero, e.g.
 
@@ -185,3 +209,116 @@ The p-value came out to 0.0006, making it less than 0.05, which does suggest tha
 Homework Reflection 8
 
 Include the code you used to solve Week 8's coding quiz problems and write about the obstacles / challenges / insights you encountered while solving them.
+
+Code:
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.linear_model import LogisticRegression
+
+data1 = pd.read_csv('homework_8.1.csv')
+
+X = data1[['Z']]
+
+y = data1['X']
+
+model_lr = LogisticRegression()
+
+model_lr.fit(X, y)
+
+data1['propensity_score'] = model_lr.predict_proba(X)[:, 1]
+
+data1.head()
+
+weighted_y_treated = []
+weighted_y_untreated = []
+
+for i in range(len(data1)):
+    if data1.loc[i, 'X'] == 1:
+        ipw = 1/data1.loc[i, 'propensity_score']
+        weighted_y_treated.append(ipw * data1.loc[i, 'Y'])
+    else: 
+        ipw = 1/(1 - data1.loc[i, 'propensity_score'])
+        weighted_y_untreated.append(ipw * data1.loc[i, 'Y'])
+
+ATE = (sum(weighted_y_treated) - sum(weighted_y_untreated))/len(data1)
+
+print(f'The average treatment effect is {ATE:.1f}')
+
+data2 = pd.read_csv('homework_8.2.csv')
+
+data2.head()
+
+import scipy
+
+Z_matrix = np.array(data2[['Z1', 'Z2']]).T
+
+cov_matrix = np.cov(Z_matrix)
+inv_cov = np.linalg.inv(cov_matrix)
+
+print('Inverted Covariance Matrix')
+print(inv_cov)
+
+untreated_rows = data2[data2['X'] == 0]
+treated_rows = data2[data2['X'] == 1]
+
+matches = []
+
+for index, treated in treated_rows.iterrows():
+
+    distances = []
+
+    for idx, untreated in untreated_rows.iterrows():
+        distance = scipy.spatial.distance.mahalanobis(treated[['Z1', 'Z2']].to_numpy(dtype = float), untreated[['Z1', 'Z2']].to_numpy(dtype = float),
+                                                      inv_cov)
+        distances.append(distance)
+
+    nearest_index = untreated_rows.index[np.argmin(distances)]
+
+    matches.append((index, nearest_index))
+
+treatment_effects = []
+
+for treated_idx, untreated_idx in matches: 
+
+    treated_y = data2.loc[treated_idx, 'Y']
+    untreated_y = data2.loc[untreated_idx, 'Y']
+
+    treatment_effect = treated_y - untreated_y
+
+    treatment_effects.append(treatment_effect)
+
+ATE = np.mean(treatment_effects)
+
+print(f'ATE = {ATE:.4f}')
+
+furthest_distance = 0
+
+for index, treated in treated_rows.iterrows():
+
+    distances = []
+
+    for idx, untreated in untreated_rows.iterrows():
+        distance = scipy.spatial.distance.mahalanobis(treated[['Z1', 'Z2']].to_numpy(dtype = float), untreated[['Z1', 'Z2']].to_numpy(dtype = float),
+                                                      inv_cov)
+        distances.append(distance)
+
+    min_distance = min(distances)
+
+    if min_distance > furthest_distance:
+
+        furthest_index_treated = index
+        furthest_index_untreated = untreated_rows.index[np.argmin(distances)]
+        furthest_distance = min_distance
+
+print((furthest_index_treated, furthest_index_untreated))
+
+data2.loc[furthest_index_treated, ['Z1', 'Z2']]
+
+data2.loc[furthest_index_untreated, ['Z1', 'Z2']]
+
+For week 8, the biggest obstacle I did end up facing was the wording of Question 4 on the assessment as I was spending a lot of time questioning where my code was messing up since the answer I was getting was incorrect. As other classmates have stated, the wording of the question made it seem like we were looking for the Z1 and Z2 values for the treated instance in the matched pair, which is why I have that included at the end of my code first. However, in Piazza, it was made clear that the answer is actually we are supposed to find the furthest distance and then get the Z1 and Z2 values for the untreated instance of the matched pair, which is what the last code statement is doing. 
+
+As for insights I gained, I gained a better understanding of how the Mahalanobis distance truly works at matching values when there are multiple Z values that can be used. When beginning this weeks homework, I spent some time looking at the documentation for the scipy function and also looking up how this distance works as I was unsure what to provide the function besides the inverse matrix that was stated in the assessments description. By doing this research, I have a better understanding that Mahalanobis distance will compare the two points while also looking at their variance and covariance. This is especially helpful when working with multiple Z values that are somewhat correlated, as it provides a more informed distance of how far apart the two observations are. 
