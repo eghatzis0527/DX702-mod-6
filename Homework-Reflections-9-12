@@ -6,11 +6,102 @@ Homework Reflection 9
 1. Write some code that will use a simulation to estimate the standard deviation of the coefficient when there is heteroskedasticity.  
 Compare these standard errors to those found via statsmodels OLS or a similar linear regression model.
 
+Code: 
+n = 1000
+simulations = 1000
+
+coefs = []
+ols_se = []
+robust_se = []
+
+for i in range(simulations):
+
+    X = np.random.uniform(1, 10, n)
+    error = np.random.normal(0, 0.5 * X, n)
+
+    Y = 4 + 7 * X + error
+
+    X = sm.add_constant(X)
+
+    model = sm.OLS(Y, X).fit()
+
+    coefs.append(model.params[1])
+    ols_se.append(model.bse[1])
+
+simulation_sd = np.std(coefs)
+
+average_ols_se = np.mean(ols_se)
+average_robust_se = np.mean(robust_se)
+
+print(f'Simulation Standard Deviation: {simulation_sd:.3f}')
+print(f'Average OLS Standard Error: {average_ols_se:.3f}')
+
+When I ran this code, the results were the simulation standard deviation was 0.039 and the average OLS standard error was 0.037. These numbers may differ slightly when ran again due to not setting a random seed. Comparing these numbers, the difference isn't that large, but the actual variance in the coefficients is larger than the OLS model is producing. This is most likely caused by the heteroskedasticity I included in this data, as the regular OLS models assumes there is homoskedasticity, meaning that there is a constant error variance which is not the case here. I also want to note that even though the difference is small, it still shows heteroskedasticity has an effect on the standard error.
+
 2. Write some code that will use a simulation to estimate the standard deviation of the coefficient when errors are highly correlated / non-independent.
 Compare these standard errors to those found via statsmodels OlS or a similar linear regression model.
 
 Show that if the correlation between errors is high enough, then the estimated standard deviation of the coefficient, using bootstrap errors, 
 might not match that found by a full simulation of the Data Generating Process.  (This can be fixed if you have a huge amount of data for the bootstrap simulation.)
+
+ Code: 
+
+ n = 1000
+simulations = 1000
+rho = 0.9
+
+X = np.random.normal(0, 1, n)
+
+X_const = sm.add_constant(X)
+
+coefs = []
+ols_se = []
+
+for i in range(simulations): 
+
+    u = np.random.normal(0, 1, n)
+    error = np.zeros(n)
+
+    for t in range(1, n):
+        error[t] = rho * error[t-1] + u[t]
+
+    Y = 4 + 7 * X + error
+
+    model = sm.OLS(Y, X_const).fit()
+
+    coefs.append(model.params[1])
+    ols_se.append(model.bse[1])
+
+simulation_sd = np.std(coefs)
+average_ols_se = np.mean(ols_se)
+
+u = np.random.normal(0, 1, n)
+error = np.zeros(n)
+
+error[0] = np.random.normal(0, 1)
+
+for t in range(1, n):
+    error[t] = rho * error[t-1] + u[t]
+
+Y = 4 + 7 * X + error
+
+data = pd.DataFrame({'X' : X, 'Y' : Y})
+
+bootstrap_coefs = []
+
+for i in range(1000):
+
+    bootstrap_data = data.sample(n = n, replace = True)
+
+    X_boot = sm.add_constant(bootstrap_data['X'])
+
+    model = sm.OLS(bootstrap_data['Y'], X_boot).fit()
+
+    bootstrap_coefs.append(model.params['X'])
+
+bootstrap_sd = np.std(bootstrap_coefs)
+
+When I ran this code, the simulation standard deviation was 0.078, the average OLS standard error was 0.071 and the bootstrap simulation standard deviation was 0.064. These numbers may differ when reran due to no random seed being set. You can see that the simulation standard deviation is much higher than the bootstrap simulation and is closer to the OLS standard error. The bootstrap sample is treating each observation as independent when they are not independent, which could lead to the larger difference we are seeing between the two of them. This also shows that randomly resampling individual observations does not adequately capture the dependence between the errors, while the simulation sd does as it captures the variability that results from the dependence.  
 
 Homework Reflection 10
 
@@ -24,9 +115,111 @@ Build a model that tries to decide whether the event is real (has a nonzero effe
 (b) the value, derivative, and second derivative.
 Which of these models is better at detecting and/or quantifying the impact of the event?  (What might "better" mean here?)
 
+Code:
+
+n = 100
+time = np.arange(n)
+
+event_time = 50
+
+post = (time >= event_time).astype(int)
+
+error = np.random.normal(0, 2, n)
+
+Y = 12 + 0.4 * time + 0.02 * time**2 + 6 * post + 0.3 * (time - event_time) * post + 0.03 * (time - event_time)**2 * post + error
+
+data = pd.DataFrame({'time' : time, 'post' : post, 'Y' : Y})
+
+X1 = data['post']
+X1 = sm.add_constant(X1)
+
+model1 = sm.OLS(data['Y'], X1).fit()
+
+model1.summary()
+
+data['time_sq'] = data['time']**2
+data['time_after'] = (data['time'] - event_time) * data['post']
+data['time_after_sq'] = (data['time'] - event_time)**2 * data['post']
+
+X2 = data[['time', 'time_sq', 'post', 'time_after', 'time_after_sq']]
+X2 = sm.add_constant(X2)
+
+model2 = sm.OLS(data['Y'], X2).fit()
+
+model2.summary()
+
+simulations = 1000
+
+model1_coefs = []
+model2_coefs = []
+
+for i in range(1000):
+
+    error = np.random.normal(0, 2, n)
+
+    Y = 12 + 0.4 * time + 0.02 * time**2 + 6 * post + 0.3 * (time - event_time) * post + 0.03 * (time - event_time)**2 * post + error
+
+    data = pd.DataFrame({'time' : time, 'post' : post, 'Y' : Y})
+
+    X1 = sm.add_constant(data['post'])
+    model1 = sm.OLS(Y, X1).fit()
+
+    model1_coefs.append(model1.params['post'])
+
+    data['time_sq'] = time**2
+    data['time_after'] = (time - event_time) * post
+    data['time_after_sq'] = (time - event_time)**2 * post
+
+    X2 = data[['time', 'time_sq', 'post', 'time_after', 'time_after_sq']]
+    X2 = sm.add_constant(X2)
+
+    model2 = sm.OLS(Y, X2).fit()
+    model2_coefs.append(model2.params[['post', 'time_after', 'time_after_sq']])
+
+model1_average = np.mean(model1_coefs)
+model2_average = pd.DataFrame(model2_coefs).mean()
+
+For the results, I ended up running a simulation and then comparing the average coefficients for the value (post), derivative (time_after), and second derivative (time_after_sq) to the actual set coefficients in the Y formula. For my formula, the post coefficient was 6, the time_after coefficient was 0.3 and the time_after squared coefficient was 0.03. When comparing the A model, the post coefficient was 156.610, while the three coefficients for the B model are 5.99 for the post, 0.3 for the time after and 0.03 for the time after square. The B model's average coefficients aligned much more with the true coefficients compared to the A model's average coefficient. The A model has a much higher coefficient as the model is attributing a lot of the effects from the other features that Y is constructed from to the value alone since the model is not provided the other features for predictions. The B model is also able to properly estimate the value, slope and curvature changes due to the features being included in the model fit process. Due to this, I would say the B model is better in this situation as the coefficients are more accurate to the true Y coefficients and will provide a more reliable set of results. 
+
 2. Construct a dataset in which there are three groups whose values each increase discontinuously (suddenly) by the same amount at a shared event; they change in parallel
 over time, but they have different starting values.  Create a model that combines group fixed effects with an event study, as suggested in the online reading.
 Explain what you did, how the model works, and how it accounts for both baseline differences and the common event effect.
+
+Code: 
+
+time = np.arange(100)
+event_time = 50
+
+groups = ['A', 'B', 'C']
+
+starting_values = {'A' : 12, 'B': 18, 'C' : 24}
+
+data = []
+
+for group in groups:
+    for t in time: 
+        post = (t >= event_time).astype(int)
+
+        y = (starting_values[group] + 0.5 * t + 7 * post + np.random.normal(0, 1))
+
+        data.append([group, t, post, y])
+
+df = pd.DataFrame(data, columns = ['group', 'time', 'post', 'Y'])
+
+X = pd.get_dummies(df[['group']], drop_first = True, dtype = int)
+
+X['time'] = df['time']
+X['post'] = df['post']
+
+X = sm.add_constant(X)
+
+Y = df['Y']
+
+model = sm.OLS(Y, X).fit()
+
+print(model.summary())
+
+For this process, I started by creating my three groups and setting the starting values for each. For the base group (A), I started at 12 and then increased by 6 for groups B (18) and C (24). Once I had my starting values set, for each group I would create a post value and then a Y value for time 1 - 100 with an event time of 50. Each group increases at a rate of 0.5 and there is a common event that increases the groups outcome by 7 after the event. Sharing the same rate increase allows there to be parallel trends between the groups before the event occurs. When it comes to accounting for baseline differences between groups, I created a X dataframe with dummy variables for each group, and dropped the group a dummy variable so it is the reference/baseline category. I then ran a linear model and looked at the coefficients to see how well the model does at successfully identifying the shared increase across all three groups. Looking at my results, the coefficients for groups b and c are both very close to the difference they have in the starting values from group A. The coefficient for post is 6.4 which is also close to the true value of 7. The post coefficient is telling me the model's estimate of the common event shared increase across the groups. This tells me that the model does a good job at identifying the common event effect that was included in the construction of the Y value. The small difference that we see in the post coefficient may be due to the random error included in the construction of the Y variable. 
 
 Homework Reflection 12
 
