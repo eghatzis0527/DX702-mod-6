@@ -31,7 +31,6 @@ for i in range(simulations):
 simulation_sd = np.std(coefs)
 
 average_ols_se = np.mean(ols_se)
-average_robust_se = np.mean(robust_se)
 
 print(f'Simulation Standard Deviation: {simulation_sd:.3f}')
 print(f'Average OLS Standard Error: {average_ols_se:.3f}')
@@ -130,7 +129,8 @@ Y = 12 + 0.4 * time + 0.02 * time**2 + 6 * post + 0.3 * (time - event_time) * po
 
 data = pd.DataFrame({'time' : time, 'post' : post, 'Y' : Y})
 
-X1 = data['post']
+X1 = data[['time', 'post']]
+X1['time_sq'] = X1['time']**2
 X1 = sm.add_constant(X1)
 
 model1 = sm.OLS(data['Y'], X1).fit()
@@ -161,7 +161,8 @@ for i in range(1000):
 
     data = pd.DataFrame({'time' : time, 'post' : post, 'Y' : Y})
 
-    X1 = sm.add_constant(data['post'])
+    X1 = sm.add_constant(data[['time', 'post']])
+    X1['time_sq'] = X1['time']**2
     model1 = sm.OLS(Y, X1).fit()
 
     model1_coefs.append(model1.params['post'])
@@ -179,7 +180,10 @@ for i in range(1000):
 model1_average = np.mean(model1_coefs)
 model2_average = pd.DataFrame(model2_coefs).mean()
 
-For the results, I ended up running a simulation and then comparing the average coefficients for the value (post), derivative (time_after), and second derivative (time_after_sq) to the actual set coefficients in the Y formula. For my formula, the post coefficient was 6, the time_after coefficient was 0.3 and the time_after squared coefficient was 0.03. When comparing the A model, the post coefficient was 156.610, while the three coefficients for the B model are 5.99 for the post, 0.3 for the time after and 0.03 for the time after square. The B model's average coefficients aligned much more with the true coefficients compared to the A model's average coefficient. The A model has a much higher coefficient as the model is attributing a lot of the effects from the other features that Y is constructed from to the value alone since the model is not provided the other features for predictions. The B model is also able to properly estimate the value, slope and curvature changes due to the features being included in the model fit process. Due to this, I would say the B model is better in this situation as the coefficients are more accurate to the true Y coefficients and will provide a more reliable set of results. 
+print(f'Model 1 Average Post: {model1_average:.3f}')
+print(model2_average)
+
+For the results, I ended up running a simulation and then comparing the average coefficients for the value (post), derivative (time_after), and second derivative (time_after_sq) to the actual set coefficients in the Y formula. For my formula, the post coefficient was 6, the time_after coefficient was 0.3 and the time_after squared coefficient was 0.03. When comparing the A model, the post coefficient was -6.672, while the three coefficients for the B model are 5.99 for the post, 0.3 for the time after and 0.03 for the time after square. The B model's average coefficients aligned much more with the true coefficients compared to the A model's average coefficient. The A model has a lower coefficient as the model is attributing a lot of the constant effects from the other features that Y is constructed from to the value alone since the model is not provided the other features for predictions. The B model is also able to properly estimate the value, slope and curvature changes due to the features being included in the model fit process. Due to this, I would say the B model is better in this situation as the coefficients are more accurate to the true Y coefficients and will provide a more reliable set of results. 
 
 2. Construct a dataset in which there are three groups whose values each increase discontinuously (suddenly) by the same amount at a shared event; they change in parallel
 over time, but they have different starting values.  Create a model that combines group fixed effects with an event study, as suggested in the online reading.
@@ -225,3 +229,36 @@ Homework Reflection 12
 
 Construct a dataset in which prior trends do not hold, and in which this makes the differences-in-differences come out wrong.  Explain why the
 differences-in-differences estimate of the effect comes out higher or lower than the actual effect.
+
+Code: 
+
+time = np.arange(100)
+event_time = 50
+
+data = []
+
+for group in ['Treatment', 'Control']:
+    for t in time:
+
+        post = (t >= event_time).astype(int)
+        treated = int(group == 'Treatment')
+
+        if group == 'Treatment':
+            y = 24 + t + 5 * post + np.random.normal(0, 1)
+        
+        else:
+            y = 12 + 0.5 * t + np.random.normal(0, 1)
+
+        data.append([group, t, treated, post, y])
+
+df = pd.DataFrame(data, columns = ['group', 'time', 'treated', 'post', 'Y'])
+
+means = df.groupby(['group', 'post'])['Y'].mean().unstack()
+
+treatment_change = means.loc['Treatment', 1] - means.loc['Treatment', 0]
+
+control_change = means.loc['Control', 1] - means.loc['Control', 0]
+
+did = treatment_change - control_change
+
+The actual effect of this dataset is 5 which can be seen in the 5 * the post variable in the treatment group y values construction. However, the differences in differences estimate came out to 30, which is much higher than the actual value. This is caused by the increased trend as time progresses for the treatment group compared to the control group. For the treatment group, it increases at a rate of 1 while the control group increases at a rate of 0.5. Due to this larger and different rate, this means that the parellel trends assumption in differences with differences is violated and this leads the differences in differences to attribute some of that pre-existing difference in the trend rates to the treatment group in general. 
